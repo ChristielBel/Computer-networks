@@ -6,9 +6,9 @@
 #include <string> 
 #pragma comment (lib, "Ws2_32.lib")  
 using namespace std;
-#define SRV_PORT 1234  
-#define BUF_SIZE 64  
-const string QUEST = "Who are you?\n";
+#define SRV_PORT 1234  //порт сервера(его обязательно должен знать клиент)
+#define BUF_SIZE 64  //размер
+const string QUEST = "Who are you?\n"; //первый вопрос для клиента, чтобы начать диалог
 int main() {
 	char buff[1024];
 	if (WSAStartup(0x0202, (WSADATA*)&buff[0]))
@@ -16,33 +16,35 @@ int main() {
 		cout << "Error WSAStartup \n" << WSAGetLastError();   // Ошибка!
 		return -1;
 	}
-	SOCKET s, s_new;
+	SOCKET s, s_new; //2 сокета, s - сервера, s_new -клиента, коитоорый подключился
 	int from_len;
 	char buf[BUF_SIZE] = { 0 };
-	sockaddr_in sin, from_sin;
-	s = socket(AF_INET, SOCK_STREAM, 0);
-	sin.sin_family = AF_INET;
-	sin.sin_addr.s_addr = 0;
+	sockaddr_in sin, from_sin; //2 струкртуры, s - сервера, s_new -клиента, котоорый подключился
+	s = socket(AF_INET, SOCK_STREAM, 0); //создание сокета, указывается адрес, должго быть одно и тоже соединение
+	sin.sin_family = AF_INET; 
+	sin.sin_addr.s_addr = 0; //адрес текущего компа
 	sin.sin_port = htons(SRV_PORT);
-	bind(s, (sockaddr*)&sin, sizeof(sin));
+	bind(s, (sockaddr*)&sin, sizeof(sin)); //добавляем информацию в сокет
 	string msg, msg1;
-	listen(s, 3);
+	listen(s, 3); //создает очередь в три клиента
+	//сервер работает бесконечно долго
 	while (1) {
 		from_len = sizeof(from_sin);
-		s_new = accept(s, (sockaddr*)&from_sin, &from_len);
-		cout << "new connected client! " << endl;
+		s_new = accept(s, (sockaddr*)&from_sin, &from_len); //из очереди, в которой могут стоть 3 клиента, вынимает клиента, в структуру from_sin 
+		//попадает итнформация о клиенте, а вторая функция указывает размер
+		cout << "new connected client! " << endl; //говорим, что подключился клиент
 		msg = QUEST;
 		while (1) {
-			send(s_new, (char*)&msg[0], msg.size(), 0);
-			from_len = recv(s_new, (char*)buf, BUF_SIZE, 0);
-			buf[from_len] = 0;
+			send(s_new, (char*)&msg[0], msg.size(), 0); //посылаем сообщение
+			from_len = recv(s_new, (char*)buf, BUF_SIZE, 0); //получаем новое сообщение
+			buf[from_len] = 0; 
 			msg1 = (string)buf;
 			cout << msg1 << endl;;
-			if (msg1 == "Bye") break;
+			if (msg1 == "Bye") break;//если бай, то разрываем диалог, но если не бай, то общаемся дальше
 			getline(cin, msg);
 		}
-		cout << "client is lost";
-		closesocket(s_new);
+		cout << "client is lost" << endl;
+		closesocket(s_new); //разрываем связь с клиентом и уходим общаться с другим клиентом
 	}
 	return 0;
 }
