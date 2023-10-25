@@ -1,4 +1,4 @@
-// SERVER TCP 
+// SERVER TCP 10.16.4.132 IP
 //#include <stdafx.h> 
 #include <iostream>  
 #include <winsock2.h> 
@@ -21,7 +21,7 @@ int main() {
 	char buf[BUF_SIZE] = { 0 };
 	sockaddr_in sin, from_sin; //2 струкртуры, s - сервера, s_new -клиента, котоорый подключился
 	s = socket(AF_INET, SOCK_STREAM, 0); //создание сокета, указывается адрес, должго быть одно и тоже соединение
-	sin.sin_family = AF_INET; 
+	sin.sin_family = AF_INET;
 	sin.sin_addr.s_addr = 0; //адрес текущего компа
 	sin.sin_port = htons(SRV_PORT);
 	bind(s, (sockaddr*)&sin, sizeof(sin)); //добавляем информацию в сокет
@@ -32,15 +32,25 @@ int main() {
 		from_len = sizeof(from_sin);
 		s_new = accept(s, (sockaddr*)&from_sin, &from_len); //из очереди, в которой могут стоть 3 клиента, вынимает клиента, в структуру from_sin 
 		//попадает итнформация о клиенте, а вторая функция указывает размер
+		fd_set fd;
+		FD_ZERO(&fd);
+		FD_SET(s_new, &fd);
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 0;
 		cout << "new connected client! " << endl; //говорим, что подключился клиент
 		msg = QUEST;
 		while (1) {
-			send(s_new, (char*)&msg[0], msg.size(), 0); //посылаем сообщение
+			if(WSAGetLastError() == WSAENOTCONN || WSAGetLastError() == WSAECONNRESET || send(s_new, (char*)&msg[0], msg.size(), 0)==SOCKET_ERROR) break; //посылаем сообщение
 			from_len = recv(s_new, (char*)buf, BUF_SIZE, 0); //получаем новое сообщение
-			buf[from_len] = 0; 
+			buf[from_len] = 0;
 			msg1 = (string)buf;
-			cout << msg1 << endl;;
-			if (msg1 == "Bye") break;//если бай, то разрываем диалог, но если не бай, то общаемся дальше
+			cout << "client: ";
+			cout << msg1 << endl;
+			//if (!select(s_new + 1, NULL, &fd, NULL, &tv)) { cout << "aaaa";  break; }
+			//cout << select(s_new + 1, NULL, &fd, NULL, &tv);
+			if (msg1 == "q") break;//если бай, то разрываем диалог, но если не бай, то общаемся дальше
+			cout << "server: ";
 			getline(cin, msg);
 		}
 		cout << "client is lost" << endl;
