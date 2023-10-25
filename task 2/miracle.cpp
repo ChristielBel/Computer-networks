@@ -35,22 +35,20 @@ int main() {
 		cout << "new connected client! " << endl; //говорим, что подключился клиент
 		msg = QUEST;
 		while (1) {
-			//send(s_new, (char*)&msg[0], msg.size(), 0);//посылаем сообщение
-			int bytesSent = send(s_new, (char*)&msg[0], msg.size(), 0);
+			int bytesSent = send(s_new, (char*)&msg[0], msg.size(), 0); //посылаем сообщение
 			if (bytesSent == SOCKET_ERROR) {
 				//cout << "Error sending data to client: " << WSAGetLastError() << endl;
 				break;
-			}
-			int bytesReceived = recv(s_new, (char*)buf, BUF_SIZE, 0);
+			} //проверяет ошибки при отправке данных клиенту
+			int bytesReceived = recv(s_new, (char*)buf, BUF_SIZE, 0); //получаем новое сообщение
 			if (bytesReceived == SOCKET_ERROR) {
 				//cout << "Error receiving data from client: " << WSAGetLastError() << endl;
 				break;
-			}
-			//from_len = recv(s_new, (char*)buf, BUF_SIZE, 0); //получаем новое сообщение
-			if (bytesReceived == 0) {
+			} //проверка ошибок при получении сообщения от клиента
+			/*if (bytesReceived == 0) {
 				cout << "client is lost" << endl;
 				break;
-			}
+			}*/
 			buf[bytesReceived] = 0;
 			msg1 = (string)buf;
 			cout << "client: ";
