@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define request "GET / HTTP/1.1\r\nHost: library.ru\r\n\r\n"
+#define request "GET / HTTP/1.1\r\nHost: json.org\r\n\r\n"
 #define max_packet_size 65535
 
 int main() {
