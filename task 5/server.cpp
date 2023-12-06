@@ -12,28 +12,35 @@ struct StudentData {
     int grades[4];
 };
 
+// Структура для хранения результата стипендии и количества задолженностей
+struct ScholarshipResult {
+    std::string scholarship;
+    int debtCount;
+};
+
 // Функция для вычисления стипендии
-std::string calculateScholarship(const StudentData& student) {
+ScholarshipResult calculateScholarship(const StudentData& student) {
     bool hasDebt = false;
     bool hasThree = false;
+    int debtCount = 0;
 
     for (int i = 0; i < 4; ++i) {
         if (student.grades[i] == 2) {
             hasDebt = true;
-            break;
+            debtCount++;
         } else if (student.grades[i] == 3) {
             hasThree = true;
         }
     }
 
     if (hasDebt) {
-        return "No scholarship due to debt.";
+        return {"No scholarship due to debt.", debtCount};
     } else if (hasThree) {
-        return "No scholarship due to grade 3.";
+        return {"No scholarship due to grade 3.", 0};
     } else if (std::all_of(student.grades, student.grades + 4, [](int grade) { return grade == 5; })) {
-        return "Increased scholarship.";
+        return {"Increased scholarship.", 0};
     } else {
-        return "Regular scholarship.";
+        return {"Regular scholarship.", 0};
     }
 }
 
@@ -67,19 +74,19 @@ void* handleClient(void* arg) {
             }
         }
 
-        if(validGrades==false) {
-            std::string response;
+        std::string response;
+        if (!validGrades) {
+            response = "Invalid grades. Grades must be in the range of 2 to 5.";
+        } else {
+            ScholarshipResult result = calculateScholarship(student);
+            response = result.scholarship;
 
-            if (!validGrades) {
-                response = "Invalid grades. Grades must be in the range of 2 to 5.";
-            } else {
-                response = calculateScholarship(student);
+            if (result.debtCount > 0) {
+                response += " (Debts: " + std::to_string(result.debtCount) + ")";
             }
-
-            send(clientSocket, response.c_str(), response.size() + 1, 0);
         }
-        std::string scholarship = calculateScholarship(student);
-        send(clientSocket, scholarship.c_str(), scholarship.size() + 1, 0);
+
+        send(clientSocket, response.c_str(), response.size() + 1, 0);
     }
 
     close(clientSocket);
