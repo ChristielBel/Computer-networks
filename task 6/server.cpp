@@ -25,7 +25,7 @@ void BroadcastMessage(const std::string& message, const std::string& senderNickn
     std::lock_guard<std::mutex> lock(clientsMutex);
     for (auto it = clients.begin(); it != clients.end();) {
         SOCKET clientSocket = it->socket;
-        std::string formattedMessage = "[" + (senderNickname.empty() ? "Server" : senderNickname) + "]: " + message;
+        std::string formattedMessage = "[" + (senderNickname.empty() ? "Server" : senderNickname) + "]: " + message + "\n";
 
         int result = send(clientSocket, formattedMessage.c_str(), formattedMessage.size(), 0);
         if (result == SOCKET_ERROR) {
@@ -45,7 +45,7 @@ void HandleClient(ClientInfo client) {
     // Приветственное сообщение для нового пользователя
     // Информация о командах для личных сообщений и выхода
     std::string welcomeMessage = "[Server]: Welcome, " + client.nickname + "!";
-    welcomeMessage += " Use '/w username message' to send a private message. Use '/quit' to exit the chat.";
+    welcomeMessage += " Use '/w username message' to send a private message. Use '/quit' to exit the chat.\n";
     send(client.socket, welcomeMessage.c_str(), welcomeMessage.size(), 0);
 
     while (true) {
@@ -62,7 +62,7 @@ void HandleClient(ClientInfo client) {
                 closesocket(client.socket);
 
                 // Системное сообщение о выходе клиента
-                std::string leaveMessage = "[System]: User " + client.nickname + " has left the chat.";
+                std::string leaveMessage = "[System]: User " + client.nickname + " has left the chat.\n";
 
                 // Отправка системного сообщения каждому клиенту, кроме вышедшего
                 for (const auto& otherClient : clients) {
@@ -87,7 +87,7 @@ void HandleClient(ClientInfo client) {
                 std::lock_guard<std::mutex> lock(clientsMutex);
                 for (const auto& targetClient : clients) {
                     if (targetClient.nickname == targetNickname) {
-                        std::string formattedPrivateMessage = "[Private from " + client.nickname + "]: " + privateMessage;
+                        std::string formattedPrivateMessage = "[Private from " + client.nickname + "]: " + privateMessage + "\n";
                         int result = send(targetClient.socket, formattedPrivateMessage.c_str(), formattedPrivateMessage.size(), 0);
                         if (result == SOCKET_ERROR) {
                             std::cerr << "Failed to send private message to client" << std::endl;
@@ -151,12 +151,20 @@ int main() {
             continue;
         }
 
+        //создаются буферы для хранения имени хоста и сервиса (порта).
         char host[NI_MAXHOST];
         char service[NI_MAXSERV];
 
+        //обнуляют содержимое буферов.
         ZeroMemory(host, NI_MAXHOST);
         ZeroMemory(service, NI_MAXSERV);
 
+        //пытается получить информацию о клиенте (имя хоста и сервиса) с использованием функции getnameinfo. 
+        //Если успешно, то в блоке if выводится сообщение о подключении клиента с его именем хоста и портом.
+        // если не удалось получить информацию о клиенте с использованием getnameinfo, то используется альтернативный способ. 
+        //inet_ntop(AF_INET, &clientAddr.sin_addr, host, NI_MAXHOST); 
+        //конвертирует IP-адрес клиента в строку и сохраняет результат в host. 
+        //Затем выводится сообщение о подключении клиента с IP-адресом и портом.
         if (getnameinfo((sockaddr*)&clientAddr, sizeof(clientAddr), host, NI_MAXHOST, service, NI_MAXSERV, 0) == 0) {
             std::cout << "Client connected: " << host << " on port " << service << std::endl;
         }
@@ -170,12 +178,17 @@ int main() {
         std::string nickname(buffer, 0, bytesReceived);
 
         {
+            // в этом блоке с использованием мьютекса clientsMutex защищается доступ к общему вектору clients.
+            //Новый клиент (структура ClientInfo с сокетом и никнеймом) добавляется в вектор.
             std::lock_guard<std::mutex> lock(clientsMutex);
             clients.push_back({ clientSocket, nickname });
         }
 
-        BroadcastMessage("User " + nickname + " has joined the chat.\n");
+        BroadcastMessage("User " + nickname + " has joined the chat.");
 
+        //создаётся новый поток, который будет обрабатывать сообщения от данного
+        //клиента с использованием функции HandleClient. 
+        //Поток запускается в фоновом режиме (detach).
         std::thread(HandleClient, clients.back()).detach();
     }
 
