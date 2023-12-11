@@ -21,7 +21,7 @@ void ReceiveMessages(SOCKET socket) {
         }
 
         std::string message(buffer, 0, bytesReceived);
-        std::cout << message << std::endl;
+        std::cout << message /*<< std::endl*/;
     }
 }
 
