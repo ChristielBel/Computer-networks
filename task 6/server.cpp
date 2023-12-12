@@ -19,6 +19,8 @@ struct ClientInfo {
 std::vector<ClientInfo> clients;
 // Мьютекс для безопасного доступа к вектору clients
 std::mutex clientsMutex;
+// Счетчик подключенных клиентов
+int connectedClients = 0;
 
 // Функция для отправки сообщения всем клиентам
 void BroadcastMessage(const std::string& message, const std::string& senderNickname = "") {
@@ -32,6 +34,8 @@ void BroadcastMessage(const std::string& message, const std::string& senderNickn
             std::cerr << "Failed to send message to client" << std::endl;
             it = clients.erase(it);
             closesocket(clientSocket);
+            connectedClients = static_cast<int>(clients.size());
+            std::cout << "Connected clients: " << connectedClients << std::endl;
         }
         else {
             ++it;
@@ -47,6 +51,10 @@ void HandleClient(ClientInfo client) {
     std::string welcomeMessage = "[Server]: Welcome, " + client.nickname + "!";
     welcomeMessage += " Use '/w username message' to send a private message. Use '/quit' to exit the chat.\n";
     send(client.socket, welcomeMessage.c_str(), welcomeMessage.size(), 0);
+
+    {
+        std::lock_guard<std::mutex> lock(clientsMutex);
+    }
 
     while (true) {
         //Обработка выхода клиента:
@@ -72,6 +80,8 @@ void HandleClient(ClientInfo client) {
                 }
 
                 clients.erase(it);
+                --connectedClients;
+                std::cout << "Connected clients: " << connectedClients << std::endl;
             }
             break;
         }
@@ -166,11 +176,15 @@ int main() {
         //конвертирует IP-адрес клиента в строку и сохраняет результат в host. 
         //Затем выводится сообщение о подключении клиента с IP-адресом и портом.
         if (getnameinfo((sockaddr*)&clientAddr, sizeof(clientAddr), host, NI_MAXHOST, service, NI_MAXSERV, 0) == 0) {
-            std::cout << "Client connected: " << host << " on port " << service << std::endl;
+            std::cout << "New client connected! " << std::endl;
+            ++connectedClients;
+            std::cout << "Connected clients: " << connectedClients << std::endl;
         }
         else {
             inet_ntop(AF_INET, &clientAddr.sin_addr, host, NI_MAXHOST);
-            std::cout << "Client connected: " << host << " on port " << ntohs(clientAddr.sin_port) << std::endl;
+            std::cout << "New client connected! " << std::endl;
+            ++connectedClients;
+            std::cout << "Connected clients: " << connectedClients << std::endl;
         }
 
         char buffer[4096];
